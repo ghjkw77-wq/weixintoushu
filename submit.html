@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>提交投诉</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 提交投诉页面 -->
+    <div class="container" id="submit-page">
+        
+        <!-- 联系方式区域 -->
+        <div class="evidence-section">
+            <div class="evidence-header">
+                <span class="evidence-title">联系方式 <span style="color: red;">*</span></span>
+            </div>
+            <div class="complaint-content-area">
+                <input type="text" class="contact-input" placeholder="请输入您的手机号/邮箱/微信号，方便我们联系您" maxlength="100">
+                <div class="word-count">0/100</div>
+            </div>
+        </div>
+        
+        <!-- 补充详细信息区域 -->
+        <div class="evidence-section">
+            <div class="evidence-header">
+                <span class="evidence-title">补充详细信息 <span style="color: red;">*</span>（不少于5字）</span>
+            </div>
+            <div class="complaint-content-area">
+                <textarea class="complaint-textarea" placeholder="请描述您遇到的问题，以便我们核实处理" maxlength="200"></textarea>
+                
+            </div>
+        </div>
+        
+        <!-- 上传截图凭证区域 -->
+        <div class="evidence-section">
+            <div class="evidence-header">
+                <span class="evidence-title">上传截图凭证(最多9张，选填)</span>
+                
+            </div>
+            <div class="image-upload-area">
+                <!-- 图片预览容器 -->
+                <div class="image-preview-container"></div>
+                <!-- 图片上传按钮 -->
+                <div class="image-upload-btn">
+                    <input type="file" class="image-input" accept="image/*" multiple style="display: none;">
+                    <div class="plus-icon">+</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 提交按钮 -->
+        <div class="submit-btn-container">
+            <button class="submit-btn" disabled>提交</button>
+        </div>
+        
+        <!-- 提交成功提示 -->
+        <div class="success-modal" style="display: none;">
+            <div class="success-content">
+                <div class="success-icon">✓</div>
+                <div class="success-text">已成功提交，请等待客服审核</div>
+                <button class="success-confirm-btn">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 获取元素
+        const contactInput = document.querySelector('.contact-input');
+        const complaintTextarea = document.querySelector('.complaint-textarea');
+        const submitBtn = document.querySelector('.submit-btn');
+        const successModal = document.querySelector('.success-modal');
+        const successConfirmBtn = document.querySelector('.success-confirm-btn');
+        
+        // 获取所有字数统计元素
+        const wordCountElements = document.querySelectorAll('.word-count');
+        
+        // 图片上传相关元素
+        const imageUploadBtn = document.querySelector('.image-upload-btn');
+        const imageInput = document.querySelector('.image-input');
+        const imagePreviewContainer = document.querySelector('.image-preview-container');
+        const evidenceCount = document.querySelector('.evidence-count');
+        
+        // 图片列表，用于存储选中的图片
+        let selectedImages = [];
+        const MAX_IMAGES = 3;
+        
+        // 联系方式字数统计
+        contactInput.addEventListener('input', function() {
+            const length = this.value.length;
+            // 更新联系方式的字数统计（第一个word-count元素）
+            wordCountElements[0].textContent = `${length}/100`;
+            // 检查是否可以启用提交按钮
+            checkSubmitEnabled();
+        });
+        
+        // 投诉内容字数统计
+        complaintTextarea.addEventListener('input', function() {
+            const length = this.value.length;
+            // 更新投诉内容的字数统计（第三个word-count元素）
+            wordCountElements[2].textContent = `${length}/200`;
+            // 检查是否可以启用提交按钮
+            checkSubmitEnabled();
+        });
+        
+        // 点击上传按钮，触发文件选择
+        imageUploadBtn.addEventListener('click', function() {
+            if (selectedImages.length < MAX_IMAGES) {
+                imageInput.click();
+            }
+        });
+        
+        // 监听文件选择事件
+        imageInput.addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+            
+            // 计算可以添加的图片数量
+            const remainingSlots = MAX_IMAGES - selectedImages.length;
+            const filesToAdd = files.slice(0, remainingSlots);
+            
+            // 处理每个选中的文件
+            filesToAdd.forEach(file => {
+                // 检查文件类型
+                if (!file.type.startsWith('image/')) {
+                    return;
+                }
+                
+                // 创建FileReader读取文件
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    // 添加图片到列表
+                    selectedImages.push({
+                        file: file,
+                        url: event.target.result
+                    });
+                    
+                    // 更新图片预览
+                    updateImagePreview();
+                    // 更新图片数量统计
+                    updateImageCount();
+                    // 检查是否可以启用提交按钮
+                    checkSubmitEnabled();
+                };
+                reader.readAsDataURL(file);
+            });
+            
+            // 清空文件输入，允许重新选择相同的文件
+            this.value = '';
+        });
+        
+        // 更新图片预览
+        function updateImagePreview() {
+            // 清空预览容器
+            imagePreviewContainer.innerHTML = '';
+            
+            // 添加每个图片的预览
+            selectedImages.forEach((image, index) => {
+                const previewItem = document.createElement('div');
+                previewItem.className = 'image-preview-item';
+                
+                // 创建图片元素
+                const img = document.createElement('img');
+                img.className = 'image-preview';
+                img.src = image.url;
+                img.alt = `图片${index + 1}`;
+                
+                // 创建删除按钮
+                const deleteBtn = document.createElement('div');
+                deleteBtn.className = 'image-delete-btn';
+                deleteBtn.textContent = '×';
+                
+                // 添加删除事件
+                deleteBtn.addEventListener('click', function() {
+                    // 从列表中移除图片
+                    selectedImages.splice(index, 1);
+                    // 更新预览
+                    updateImagePreview();
+                    // 更新数量统计
+                    updateImageCount();
+                    // 检查是否可以启用提交按钮
+                    checkSubmitEnabled();
+                });
+                
+                // 组装预览项
+                previewItem.appendChild(img);
+                previewItem.appendChild(deleteBtn);
+                imagePreviewContainer.appendChild(previewItem);
+            });
+        }
+        
+        // 更新图片数量统计
+        function updateImageCount() {
+            evidenceCount.textContent = `${selectedImages.length}张/9`;
+            
+            // 当图片数量达到上限时，调整上传按钮样式
+            if (selectedImages.length >= MAX_IMAGES) {
+                imageUploadBtn.style.opacity = '0.5';
+                imageUploadBtn.style.cursor = 'not-allowed';
+            } else {
+                imageUploadBtn.style.opacity = '1';
+                imageUploadBtn.style.cursor = 'pointer';
+            }
+        }
+        
+        // 检查是否可以启用提交按钮
+        function checkSubmitEnabled() {
+            const hasContact = contactInput.value.trim().length > 0;
+            const hasContent = complaintTextarea.value.trim().length >= 5;
+            
+            if (hasContact && hasContent) {
+                submitBtn.removeAttribute('disabled');
+            } else {
+                submitBtn.setAttribute('disabled', 'disabled');
+            }
+        }
+        
+        // 提交按钮点击事件
+        submitBtn.addEventListener('click', function() {
+            // 显示成功提示
+            successModal.style.display = 'flex';
+        });
+        
+        // 成功提示确定按钮点击事件
+        successConfirmBtn.addEventListener('click', function() {
+            // 关闭成功提示
+            successModal.style.display = 'none';
+            // 退出所有页面
+            if (typeof WeixinJSBridge !== 'undefined') {
+                // 微信环境下关闭当前窗口
+                WeixinJSBridge.call('closeWindow');
+            } else {
+                // 其他环境下关闭当前窗口或跳转到空白页
+                window.close();
+                // 如果window.close()不生效，使用以下备选方案
+                setTimeout(function() {
+                    window.location.href = 'about:blank';
+                }, 100);
+            }
+        });
+    </script>
+</body>
+</html>
